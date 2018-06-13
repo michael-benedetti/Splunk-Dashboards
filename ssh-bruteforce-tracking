@@ -1,0 +1,187 @@
+<form stylesheet="not-white-choropleth.css">
+  <label>Security</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="time" searchWhenChanged="true">
+      <label>Time Period</label>
+      <default>
+        <earliest>-7d@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="dropdown" token="username" searchWhenChanged="true">
+      <label>Username</label>
+      <choice value="*">All</choice>
+      <default>*</default>
+      <prefix>username="</prefix>
+      <suffix>"</suffix>
+      <fieldForLabel>username</fieldForLabel>
+      <fieldForValue>username</fieldForValue>
+      <search>
+        <query>index=secure earliest=$time.earliest$ latest=$time.latest$ | iplocation ip | lookup geo_countries latitude as latitude longitude as longitude | search $country$ | stats count by username | sort - count</query>
+        <earliest>0</earliest>
+        <latest></latest>
+      </search>
+    </input>
+    <input type="dropdown" token="country" searchWhenChanged="true">
+      <label>Country</label>
+      <choice value="*">All</choice>
+      <default>*</default>
+      <prefix>Country="</prefix>
+      <suffix>"</suffix>
+      <fieldForLabel>Country</fieldForLabel>
+      <fieldForValue>Country</fieldForValue>
+      <search>
+        <query>index=secure earliest=$time.earliest$ latest=$time.latest$ | iplocation ip | lookup geo_countries latitude as latitude longitude as longitude | stats dc(Country) by Country</query>
+        <earliest>0</earliest>
+        <latest></latest>
+      </search>
+    </input>
+    <input type="dropdown" token="ip" searchWhenChanged="true">
+      <label>IP</label>
+      <choice value="*">All</choice>
+      <prefix>ip="</prefix>
+      <suffix>"</suffix>
+      <fieldForLabel>ip</fieldForLabel>
+      <fieldForValue>ip</fieldForValue>
+      <search>
+        <query>index=secure earliest=$time.earliest$ latest=$time.latest$ | stats dc(ip) by ip</query>
+        <earliest>0</earliest>
+        <latest></latest>
+      </search>
+      <default>*</default>
+    </input>
+    <input type="text" token="searchterm">
+      <label>Search Term</label>
+      <default>*</default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <single>
+        <title>Total Number of SSH Attempts</title>
+        <search>
+          <query>index=secure | iplocation ip | search $country$ $ip$ $username$ $searchterm$ | stats count</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Top 10 Username Attempts | $country$ AND $username$ AND $ip$</title>
+        <search>
+          <query>index=secure | iplocation ip | lookup geo_countries latitude as latitude longitude as longitude | search $country$ $username$ $ip$ $searchterm$ | stats count by username | sort - count | head 10</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+          <refresh>1m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="height">401</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.size">large</option>
+        <option name="trellis.splitBy">_aggregation</option>
+        <drilldown>
+          <set token="username">username="$click.value$"</set>
+        </drilldown>
+      </chart>
+    </panel>
+    <panel>
+      <map>
+        <title>Unique IPs by Country | $country$ AND $username$ AND $ip$</title>
+        <search>
+          <query>index=secure | iplocation ip | lookup geo_countries latitude as latitude longitude as longitude | search $country$ $username$ $ip$ $searchterm$ | stats dc(ip) as "Unique IPs" by Country | geom geo_countries featureIdField=Country</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+          <refresh>1m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="mapping.map.center">(30,0)</option>
+        <option name="mapping.type">choropleth</option>
+        <option name="trellis.enabled">0</option>
+        <drilldown>
+          <set token="country">Country="$click.value$"</set>
+        </drilldown>
+      </map>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>SSH Attempts Over Time | $country$ AND $username$ AND $ip$</title>
+        <search>
+          <query>index=secure username=* | iplocation ip | lookup geo_countries latitude as latitude longitude as longitude | search $country$ $username$ $ip$ $searchterm$ | timechart span=1h count as "SSH Attempts" | rename "_time" as Time | convert ctime("Time")</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+          <refresh>1m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="height">249</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Average Number of Attempts Each Hour | $country$ AND $username$ AND $ip$</title>
+        <search>
+          <query>index=secure username=* | iplocation ip | lookup geo_countries latitude as latitude longitude as longitude | search $country$ $username$ $ip$ $searchterm$ | timechart span=1h count | eval hour=strftime(_time,"%H") | stats avg(count) as "Avg. Attempts" by hour | rename hour as Hour</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="height">243</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <event>
+        <title>Latest Real-Time SSH Attempts</title>
+        <search>
+          <query>index=secure username=*</query>
+          <earliest>rt-1h</earliest>
+          <latest>rt</latest>
+        </search>
+        <option name="list.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </event>
+    </panel>
+    <panel>
+      <table>
+        <title>IPs Attempting to SSH | $country$ AND $username$ AND $ip$</title>
+        <search>
+          <query>index=secure username=* | iplocation ip | lookup geo_countries latitude as latitude longitude as longitude | search $country$ $username$ $ip$ $searchterm$ | stats count by ip, Country, City | sort - count | rename ip as "IP", count as "SSH Attempts"</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="count">20</option>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <set token="ip">ip="$row.IP$"</set>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+</form>
