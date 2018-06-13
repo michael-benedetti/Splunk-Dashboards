@@ -1,4 +1,5 @@
 # Splunk Dashboards
 Splunk dashboard source files
 
-ssh-bruteforce-tracking - A dashboard for tracking SSH bruteforce attempts.  Several items are linked to allow for point and click drilldown.
+<h3>ssh-bruteforce-tracking</h3>
+A dashboard for tracking SSH bruteforce attempts.  Several items are linked to allow for point and click drilldown.
