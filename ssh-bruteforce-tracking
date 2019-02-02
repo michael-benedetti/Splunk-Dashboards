@@ -8,19 +8,20 @@
         <latest>now</latest>
       </default>
     </input>
-    <input type="dropdown" token="username" searchWhenChanged="true">
-      <label>Username</label>
+    <input type="dropdown" token="user" searchWhenChanged="true">
+      <label>User</label>
       <choice value="*">All</choice>
       <default>*</default>
-      <prefix>username="</prefix>
+      <prefix>user="</prefix>
       <suffix>"</suffix>
-      <fieldForLabel>username</fieldForLabel>
-      <fieldForValue>username</fieldForValue>
+      <fieldForLabel>user</fieldForLabel>
+      <fieldForValue>user</fieldForValue>
       <search>
-        <query>index=secure earliest=$time.earliest$ latest=$time.latest$ | iplocation ip | lookup geo_countries latitude as latitude longitude as longitude | search $country$ | stats count by username | sort - count</query>
+        <query>index=secure earliest=$time.earliest$ latest=$time.latest$  | rex "Failed password for (?&lt;user&gt;\S+) from (?&lt;ip&gt;\S+)" | rex "Failed password for invalid user (?&lt;user&gt;\S+) from (?&lt;ip&gt;\S+)" | iplocation ip | lookup geo_countries latitude as latitude longitude as longitude | search $country$ | stats count by user | sort - count</query>
         <earliest>0</earliest>
         <latest></latest>
       </search>
+      <initialValue>*</initialValue>
     </input>
     <input type="dropdown" token="country" searchWhenChanged="true">
       <label>Country</label>
@@ -31,10 +32,11 @@
       <fieldForLabel>Country</fieldForLabel>
       <fieldForValue>Country</fieldForValue>
       <search>
-        <query>index=secure earliest=$time.earliest$ latest=$time.latest$ | iplocation ip | lookup geo_countries latitude as latitude longitude as longitude | stats dc(Country) by Country</query>
+        <query>index=secure earliest=$time.earliest$ latest=$time.latest$  | rex "Failed password for (?&lt;user&gt;\S+) from (?&lt;ip&gt;\S+)" | rex "Failed password for invalid user (?&lt;user&gt;\S+) from (?&lt;ip&gt;\S+)" | iplocation ip | lookup geo_countries latitude as latitude longitude as longitude | stats dc(Country) by Country</query>
         <earliest>0</earliest>
         <latest></latest>
       </search>
+      <initialValue>*</initialValue>
     </input>
     <input type="dropdown" token="ip" searchWhenChanged="true">
       <label>IP</label>
@@ -44,11 +46,12 @@
       <fieldForLabel>ip</fieldForLabel>
       <fieldForValue>ip</fieldForValue>
       <search>
-        <query>index=secure earliest=$time.earliest$ latest=$time.latest$ | stats dc(ip) by ip</query>
+        <query>index=secure earliest=$time.earliest$ latest=$time.latest$ | rex "Failed password for (?&lt;user&gt;\S+) from (?&lt;ip&gt;\S+)" | rex "Failed password for invalid user (?&lt;user&gt;\S+) from (?&lt;ip&gt;\S+)" | stats dc(ip) by ip</query>
         <earliest>0</earliest>
         <latest></latest>
       </search>
       <default>*</default>
+      <initialValue>*</initialValue>
     </input>
     <input type="text" token="searchterm">
       <label>Search Term</label>
@@ -60,9 +63,11 @@
       <single>
         <title>Total Number of SSH Attempts</title>
         <search>
-          <query>index=secure | iplocation ip | search $country$ $ip$ $username$ $searchterm$ | stats count</query>
+          <query>index=secure "Failed password for" | rex "Failed password for (?&lt;user&gt;\S+) from (?&lt;ip&gt;\S+)" | rex "Failed password for invalid user (?&lt;user&gt;\S+) from (?&lt;ip&gt;\S+)" | iplocation ip | search $country$ $ip$ $user$ $searchterm$ | stats count</query>
           <earliest>$time.earliest$</earliest>
           <latest>$time.latest$</latest>
+          <refresh>1m</refresh>
+          <refreshType>delay</refreshType>
         </search>
         <option name="drilldown">none</option>
         <option name="refresh.display">progressbar</option>
@@ -73,9 +78,9 @@
   <row>
     <panel>
       <chart>
-        <title>Top 10 Username Attempts | $country$ AND $username$ AND $ip$</title>
+        <title>Top 10 Username Attempts | $country$ AND $user$ AND $ip$</title>
         <search>
-          <query>index=secure | iplocation ip | lookup geo_countries latitude as latitude longitude as longitude | search $country$ $username$ $ip$ $searchterm$ | stats count by username | sort - count | head 10</query>
+          <query>index=secure "Failed password for" | rex "Failed password for (?&lt;user&gt;\S+) from (?&lt;ip&gt;\S+)" | rex "Failed password for invalid user (?&lt;user&gt;\S+) from (?&lt;ip&gt;\S+)" | iplocation ip | lookup geo_countries latitude as latitude longitude as longitude | search $country$ $user$ $ip$ $searchterm$ | stats count by user | sort - count | head 10</query>
           <earliest>$time.earliest$</earliest>
           <latest>$time.latest$</latest>
           <refresh>1m</refresh>
@@ -99,9 +104,9 @@
     </panel>
     <panel>
       <map>
-        <title>Unique IPs by Country | $country$ AND $username$ AND $ip$</title>
+        <title>Unique IPs by Country | $country$ AND $user$ AND $ip$</title>
         <search>
-          <query>index=secure | iplocation ip | lookup geo_countries latitude as latitude longitude as longitude | search $country$ $username$ $ip$ $searchterm$ | stats dc(ip) as "Unique IPs" by Country | geom geo_countries featureIdField=Country</query>
+          <query>index=secure "Failed password for" | rex "Failed password for (?&lt;user&gt;\S+) from (?&lt;ip&gt;\S+)" | rex "Failed password for invalid user (?&lt;user&gt;\S+) from (?&lt;ip&gt;\S+)" | iplocation ip | lookup geo_countries latitude as latitude longitude as longitude | search $country$ $user$ $ip$ $searchterm$ | stats dc(ip) as "Unique IPs" by Country | geom geo_countries featureIdField=Country</query>
           <earliest>$time.earliest$</earliest>
           <latest>$time.latest$</latest>
           <refresh>1m</refresh>
@@ -110,6 +115,7 @@
         <option name="drilldown">all</option>
         <option name="mapping.map.center">(30,0)</option>
         <option name="mapping.type">choropleth</option>
+        <option name="refresh.display">progressbar</option>
         <option name="trellis.enabled">0</option>
         <drilldown>
           <set token="country">Country="$click.value$"</set>
@@ -120,9 +126,9 @@
   <row>
     <panel>
       <chart>
-        <title>SSH Attempts Over Time | $country$ AND $username$ AND $ip$</title>
+        <title>SSH Attempts Over Time | $country$ AND $user$ AND $ip$</title>
         <search>
-          <query>index=secure username=* | iplocation ip | lookup geo_countries latitude as latitude longitude as longitude | search $country$ $username$ $ip$ $searchterm$ | timechart span=1h count as "SSH Attempts" | rename "_time" as Time | convert ctime("Time")</query>
+          <query>index=secure "Failed password for" | rex "Failed password for (?&lt;user&gt;\S+) from (?&lt;ip&gt;\S+)" | rex "Failed password for invalid user (?&lt;user&gt;\S+) from (?&lt;ip&gt;\S+)" | iplocation ip | lookup geo_countries latitude as latitude longitude as longitude | search $country$ $user$ $ip$ $searchterm$ | eval Country=case(Country == "United States", "United States", Country == "China", "China", Country == "Russia", "Russia", Country == "France", "France", 1==1, "Other") | timechart span=1h count as "SSH Attempts" by Country | rename "_time" as Time | convert ctime("Time")</query>
           <earliest>$time.earliest$</earliest>
           <latest>$time.latest$</latest>
           <refresh>1m</refresh>
@@ -141,11 +147,13 @@
     </panel>
     <panel>
       <chart>
-        <title>Average Number of Attempts Each Hour | $country$ AND $username$ AND $ip$</title>
+        <title>Average Number of Attempts Each Hour | $country$ AND $user$ AND $ip$</title>
         <search>
-          <query>index=secure username=* | iplocation ip | lookup geo_countries latitude as latitude longitude as longitude | search $country$ $username$ $ip$ $searchterm$ | timechart span=1h count | eval hour=strftime(_time,"%H") | stats avg(count) as "Avg. Attempts" by hour | rename hour as Hour</query>
+          <query>index=secure "Failed password for" | rex "Failed password for (?&lt;user&gt;\S+) from (?&lt;ip&gt;\S+)" | rex "Failed password for invalid user (?&lt;user&gt;\S+) from (?&lt;ip&gt;\S+)" | iplocation ip | lookup geo_countries latitude as latitude longitude as longitude | search $country$ $user$ $ip$ $searchterm$ | timechart span=1h count | eval hour=strftime(_time,"%H") | stats avg(count) as "Avg. Attempts" by hour | rename hour as Hour</query>
           <earliest>$time.earliest$</earliest>
           <latest>$time.latest$</latest>
+          <refresh>1m</refresh>
+          <refreshType>delay</refreshType>
         </search>
         <option name="charting.chart">line</option>
         <option name="charting.drilldown">none</option>
@@ -159,21 +167,23 @@
       <event>
         <title>Latest Real-Time SSH Attempts</title>
         <search>
-          <query>index=secure username=*</query>
+          <query>index=secure "Failed password for"</query>
           <earliest>rt-1h</earliest>
           <latest>rt</latest>
         </search>
-        <option name="list.drilldown">none</option>
+        <option name="list.drilldown">full</option>
         <option name="refresh.display">progressbar</option>
       </event>
     </panel>
     <panel>
       <table>
-        <title>IPs Attempting to SSH | $country$ AND $username$ AND $ip$</title>
+        <title>IPs Attempting to SSH | $country$ AND $user$ AND $ip$</title>
         <search>
-          <query>index=secure username=* | iplocation ip | lookup geo_countries latitude as latitude longitude as longitude | search $country$ $username$ $ip$ $searchterm$ | stats count by ip, Country, City | sort - count | rename ip as "IP", count as "SSH Attempts"</query>
+          <query>index=secure "Failed password for" | rex "Failed password for (?&lt;user&gt;\S+) from (?&lt;ip&gt;\S+)" | rex "Failed password for invalid user (?&lt;user&gt;\S+) from (?&lt;ip&gt;\S+)" | iplocation ip | lookup geo_countries latitude as latitude longitude as longitude | search $country$ $user$ $ip$ $searchterm$ | stats count by ip, Country, City | sort - count | rename ip as "IP", count as "SSH Attempts"</query>
           <earliest>$time.earliest$</earliest>
           <latest>$time.latest$</latest>
+          <refresh>1m</refresh>
+          <refreshType>delay</refreshType>
         </search>
         <option name="count">20</option>
         <option name="drilldown">cell</option>
